@@ -9,7 +9,7 @@ import time
 import math
 import tkinter as tk
 from tkinter import ttk
-from bridge_server import BridgeServer, load_or_create_config, save_config
+from bridge_server import BridgeServer, load_or_create_config, save_config, VALID_STYLES, HEX_COLOR_REGEX
 
 # Set DPI awareness on Windows safely before creating GUI
 try:
@@ -239,21 +239,14 @@ class TransparentOverlayApp:
             self.draw_poster_text("[ Waiting for Chrome Extension ]")
 
     def apply_config_update(self, msg: dict):
-        # Update config dictionary
-        if "text_style" in msg:
+        # Update config dictionary with strictly validated fields
+        if "text_style" in msg and msg["text_style"] in VALID_STYLES:
             self.config["text_style"] = msg["text_style"]
-        if "font_size" in msg:
-            self.config["font_size"] = msg["font_size"]
-        if "highlight_color" in msg:
+        if "font_size" in msg and isinstance(msg["font_size"], (int, float)):
+            self.config["font_size"] = max(12, min(80, int(msg["font_size"])))
+        if "highlight_color" in msg and isinstance(msg["highlight_color"], str) and HEX_COLOR_REGEX.match(msg["highlight_color"]):
             self.config["highlight_color"] = msg["highlight_color"]
         save_config(self.config)
-        
-        # Redraw the current text
-        if self.caption_queue:
-            # We don't want to disrupt animation, but if it's paused on the last caption we redraw it
-            pass
-        # Let's just redraw whatever was last shown by storing it or retrieving it
-        # The easiest way is to just let the next caption render it, but we want live feedback
         self.draw_poster_text("[ Configuration Updated ]")
 
     def animate_eq(self):

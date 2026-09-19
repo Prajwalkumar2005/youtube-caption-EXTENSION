@@ -3,6 +3,8 @@ import json
 import secrets
 import os
 import sys
+import re
+import time
 from typing import Dict, Any, Callable, Optional, Set
 import websockets
 try:
@@ -13,6 +15,15 @@ except ImportError:
 DEFAULT_PORTS = [48123, 48124, 48125, 48126, 48127, 48128]
 DEFAULT_AUTH_TOKEN = "6b525ec81e87c7c627f54b564b5b925e"
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+
+VALID_STYLES = {
+    "poster", "neon", "minimal", "classic", "classic_white",
+    "cyberpunk", "gold", "hacker", "blood", "ocean",
+    "sunset", "ghost", "vaporwave"
+}
+HEX_COLOR_REGEX = re.compile(r"^#[0-9a-fA-F]{6}$")
+MAX_PAYLOAD_BYTES = 65536  # 64 KB per frame limit
+MAX_MESSAGES_PER_SEC = 30   # DoS flood prevention
 
 def load_or_create_config() -> Dict[str, Any]:
     default_config = {
@@ -56,6 +67,7 @@ class BridgeServer:
         self.auth_token = config.get("auth_token", DEFAULT_AUTH_TOKEN)
         self.message_callback = message_callback
         self.active_clients: Set[Any] = set()
+        self.client_rate_history: Dict[Any, list] = {}
         self.server = None
         self.bound_port = None
 
@@ -74,13 +86,13 @@ class BridgeServer:
             print(f"[Security Rejected] Invalid Origin: '{origin}'")
             return False
 
-        # Query token verification
+        # Query token verification using timing-safe comparison
         token = None
         if "?token=" in path:
             token = path.split("?token=")[-1].split("&")[0]
 
-        if not token or token != self.auth_token:
-            print(f"[Security Rejected] Token mismatch. Received: '{token}'")
+        if not token or not secrets.compare_digest(str(token), str(self.auth_token)):
+            print(f"[Security Rejected] Token verification failed.")
             return False
 
         print(f"[Bridge] Verified connection from {origin}")
@@ -100,7 +112,36 @@ class BridgeServer:
         if msg_type == "caption_update":
             if "text" not in data or not isinstance(data["text"], str):
                 return False
+            # Bound caption string to prevent memory exhaustion
+            data["text"] = data["text"][:1000]
+
+        elif msg_type == "config_update":
+            if "text_style" in data:
+                if not isinstance(data["text_style"], str) or data["text_style"] not in VALID_STYLES:
+                    return False
+            if "font_size" in data:
+                if not isinstance(data["font_size"], (int, float)) or not (12 <= int(data["font_size"]) <= 80):
+                    return False
+                data["font_size"] = int(data["font_size"])
+            if "highlight_color" in data:
+                if not isinstance(data["highlight_color"], str) or not HEX_COLOR_REGEX.match(data["highlight_color"]):
+                    return False
+
+        elif msg_type == "play_state":
+            if "is_playing" in data and not isinstance(data["is_playing"], bool):
+                return False
+
         return True
+
+    def is_rate_limited(self, websocket: ServerConnection) -> bool:
+        now = time.time()
+        history = self.client_rate_history.setdefault(websocket, [])
+        # Prune timestamps older than 1 second
+        self.client_rate_history[websocket] = [t for t in history if now - t < 1.0]
+        if len(self.client_rate_history[websocket]) >= MAX_MESSAGES_PER_SEC:
+            return True
+        self.client_rate_history[websocket].append(now)
+        return False
 
     async def handler(self, websocket: ServerConnection, path: str = ""):
         if not await self.validate_connection(websocket):
@@ -108,12 +149,17 @@ class BridgeServer:
             return
 
         self.active_clients.add(websocket)
+        self.client_rate_history[websocket] = []
         print(f"[Bridge] Extension client connected (Total: {len(self.active_clients)})")
         if self.message_callback:
             self.message_callback({"type": "client_connected"})
 
         try:
             async for message in websocket:
+                if self.is_rate_limited(websocket):
+                    print("[Bridge Security] Message dropped due to client rate limit")
+                    continue
+
                 try:
                     payload = json.loads(message)
                     if self.validate_payload(payload):
@@ -122,14 +168,16 @@ class BridgeServer:
                         elif self.message_callback:
                             self.message_callback(payload)
                     else:
-                        print(f"[Bridge] Invalid payload discarded")
+                        print(f"[Bridge Security] Invalid payload schema discarded")
                 except json.JSONDecodeError:
-                    print("[Bridge] Malformed non-JSON data discarded")
+                    print("[Bridge Security] Malformed non-JSON data discarded")
         except websockets.exceptions.ConnectionClosed:
             pass
         finally:
             if websocket in self.active_clients:
                 self.active_clients.remove(websocket)
+            if websocket in self.client_rate_history:
+                del self.client_rate_history[websocket]
             print(f"[Bridge] Client disconnected (Remaining: {len(self.active_clients)})")
             if self.message_callback:
                 self.message_callback({"type": "client_disconnected", "count": len(self.active_clients)})
@@ -140,7 +188,8 @@ class BridgeServer:
                 self.server = await websockets.serve(
                     self.handler,
                     "127.0.0.1",
-                    port
+                    port,
+                    max_size=MAX_PAYLOAD_BYTES
                 )
                 self.bound_port = port
                 self.config["active_port"] = port
