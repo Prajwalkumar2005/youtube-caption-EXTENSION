@@ -91,16 +91,33 @@ Getting started takes less than 60 seconds. Anyone can download and launch it di
 
 ---
 
+## 🔒 Security Architecture & Privacy
+
+- **100% Local Loopback:** The WebSocket bridge server binds strictly to IPv4 loopback (`127.0.0.1`). It never accepts external LAN or WAN connections.
+- **Timing-Attack Proof Authentication:** Extension-to-desktop authentication uses constant-time token comparison via `secrets.compare_digest`.
+- **Browser Origin Verification:** The bridge server inspects WebSocket connection handshakes and immediately terminates any requests that do not originate from a valid `chrome-extension://` origin.
+- **Message Rate Limiting:** Per-client sliding window rate limiting (maximum 30 messages/second) guards against message flooding and UI denial-of-service.
+- **Strict Payload Sanitization:** All incoming payloads are validated against strict schemas:
+  - Caption text bounded to 1,000 characters.
+  - Font sizes strictly clamped between 12px and 80px.
+  - Accent colors validated against strict hex regex (`^#[0-9a-fA-F]{6}$`).
+  - Max WebSocket frame size capped at 64 KB (`MAX_PAYLOAD_BYTES`).
+- **Principle of Least Privilege:** The Chrome extension requires only minimal permissions (`storage`, `alarms`), with zero broad browsing history or tab access permissions.
+
+---
+
 ## 🕹️ Desktop Overlay Controls
 
 - **Move Overlay:** Click and drag anywhere along the top dark header bar.
 - **Resize Overlay:** Click and drag the bottom-right resize grip (**◢**).
 - **Audio Visualizer:** Animated reactive equalizer bars in the header pulse during playback.
+- **Minimize Overlay:** Click the **—** minimize button in the header (or press `Ctrl + H`) to toggle visibility.
 - **Copy Pairing Token:** Click the **📋 Token** button in the header to copy your pairing key with 1 click.
 - **Settings Panel:** Click the **⚙** gear icon in the header to:
   - Toggle **Click-Through Mode** (clicks pass through overlay).
   - Toggle **Lock Position** (prevents accidental movement).
   - Adjust **Background Opacity** slider.
+  - **🎲 Generate New Token:** Create a fresh cryptographically secure random token and copy it to clipboard with 1 click.
   - View full list of hotkeys.
 - **Close Overlay:** Click the **✕** button on the right side of the header.
 
@@ -111,10 +128,12 @@ Getting started takes less than 60 seconds. Anyone can download and launch it di
 | Script | Purpose |
 | :--- | :--- |
 | **`run_overlay.bat`** | One-click launcher for Windows; auto-detects Python or standalone EXE. |
+| **`build_exe.bat`** | Compiles `YT_Lyrics_Overlay.exe` standalone binary using PyInstaller. |
 | **`diagnose_setup.bat`** | Runs full system health check (Python, ports, dependencies, manifest). |
 | **`package_extension.bat`** | Bundles the `extension/` folder into `dist/yt-lyrics-overlay-extension.zip`. |
 | **`setup_windows.bat`** | Automatically installs and upgrades Python dependencies from `requirements.txt`. |
 | **`overlay_app/test_bridge.py`** | Automated security and communication test suite for WebSocket bridge. |
+| **`.github/workflows/ci.yml`** | Continuous integration workflow running health checks, tests, and packaging. |
 
 ---
 

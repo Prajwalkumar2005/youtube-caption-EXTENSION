@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.0] - Security Hardening, Usability & Production Deployment
+
+### Security
+- **Constant-Time Authentication:** Integrated `secrets.compare_digest` to prevent token timing analysis attacks.
+- **Message Rate Limiting:** Implemented per-client sliding window rate limiter (30 msgs/sec max) protecting the Tkinter main loop from denial-of-service.
+- **Strict Payload Schema Validation:** Sanitized all incoming messages—capping caption length to 1000 characters, validating typography styles against a whitelist, clamping font sizes (12-80px), and enforcing hex regex on colors.
+- **Buffer & Frame Size Protection:** Enforced 64 KB max WebSocket frame size on server listener.
+- **Principle of Least Privilege:** Stripped unused `tabs`, `scripting`, and `activeTab` permissions from Manifest V3 for immediate Chrome Web Store review compliance.
+
+### Usability
+- **1-Click Token Paste:** Added a clipboard paste button directly beside the pairing token input in the extension popup.
+- **Preset Color Swatches:** Added quick-select accent color swatches (Gold, Cyan, Neon Pink, Lime Green, Crisp White) for instant visual styling.
+- **Header Minimize Button:** Integrated a dedicated `—` minimize button into the desktop overlay header bar.
+- **Token Regeneration:** Added a 1-click `🎲 New` token generator in the Settings panel with auto-save and automatic clipboard sync.
+- **Zero-Latency Offline UI:** Migrated extension popup typography to native high-DPI system font stack to remove external font requests and avoid CSP warnings.
+
+### Deployment & Tooling
+- **One-Click Standalone Builder:** Created `build_exe.bat` using PyInstaller to bundle the overlay into an isolated Windows executable.
+- **GitHub Actions CI/CD:** Configured automated test suite, diagnostics validation, and artifact packaging on every push.
+- **Open-Source MIT License:** Added official `LICENSE` file for distribution clarity.
+- **Repository Hygiene:** Cleaned up untracked binaries and updated `.gitignore` for build/distribution outputs.
+
 ## [v1.1.0] - Interactive Controls & Diagnostics
 
 ### Added
