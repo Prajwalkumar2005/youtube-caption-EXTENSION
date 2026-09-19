@@ -1,0 +1,49 @@
+name: CI / CD Build & Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  validate-and-build:
+    name: Test & Package Release
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r overlay_app/requirements.txt
+
+      - name: Run System Diagnostics
+        run: |
+          python overlay_app/diagnostics.py
+
+      - name: Run WebSocket Bridge Security Tests
+        run: |
+          python overlay_app/test_bridge.py
+
+      - name: Package Chrome Extension (ZIP)
+        run: |
+          if (!(Test-Path "dist")) { New-Item -ItemType Directory -Path "dist" }
+          Compress-Archive -Path "extension/*" -DestinationPath "dist/yt-lyrics-overlay-extension.zip" -Force
+        shell: powershell
+
+      - name: Upload Extension Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: yt-lyrics-overlay-extension
+          path: dist/yt-lyrics-overlay-extension.zip
+          retention-days: 14

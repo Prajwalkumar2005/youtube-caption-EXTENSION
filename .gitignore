@@ -5,11 +5,15 @@ __pycache__/
 *.so
 .Python
 
-# PyInstaller build intermediates
+# PyInstaller and Distribution build outputs
 overlay_app/build/
+overlay_app/dist/
 build/
+dist/
 *.manifest
 *.spec
+*.zip
+*.exe
 
 # Virtual Environments
 venv/
