@@ -112,6 +112,9 @@ class TransparentOverlayApp:
         self.close_btn = tk.Button(self.header_frame, text="✕", font=("Segoe UI", 9), fg="#aaa", bg="#181824", bd=0, command=self.close_app)
         self.close_btn.pack(side=tk.RIGHT, padx=4)
 
+        self.min_btn = tk.Button(self.header_frame, text="—", font=("Segoe UI", 9), fg="#aaa", bg="#181824", bd=0, command=self.toggle_visibility)
+        self.min_btn.pack(side=tk.RIGHT, padx=4)
+
         self.settings_btn = tk.Button(self.header_frame, text="⚙", font=("Segoe UI", 10), fg="#aaa", bg="#181824", bd=0, command=self.open_settings)
         self.settings_btn.pack(side=tk.RIGHT, padx=4)
 
@@ -536,7 +539,24 @@ class TransparentOverlayApp:
             win.after(1500, lambda: copy_s_btn.config(text="Copy", fg="#fff"))
 
         copy_s_btn = tk.Button(token_row, text="Copy", font=("Segoe UI", 8), bg="#33334d", fg="#fff", bd=0, padx=6, command=copy_from_settings)
-        copy_s_btn.pack(side=tk.LEFT)
+        copy_s_btn.pack(side=tk.LEFT, padx=2)
+
+        def regenerate_token():
+            import secrets
+            new_token = secrets.token_hex(16)
+            self.config["auth_token"] = new_token
+            if self.server:
+                self.server.auth_token = new_token
+            save_config(self.config)
+            token_entry.delete(0, tk.END)
+            token_entry.insert(0, new_token)
+            self.root.clipboard_clear()
+            self.root.clipboard_append(new_token)
+            regen_btn.config(text="✓ Generated & Copied", fg="#40c057")
+            win.after(2000, lambda: regen_btn.config(text="🎲 New", fg="#fff"))
+
+        regen_btn = tk.Button(token_row, text="🎲 New", font=("Segoe UI", 8), bg="#2d2d42", fg="#fff", bd=0, padx=6, command=regenerate_token)
+        regen_btn.pack(side=tk.LEFT, padx=2)
 
         # Click-through toggle
         ct_var = tk.BooleanVar(value=self.config.get("click_through", False))

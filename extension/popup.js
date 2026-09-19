@@ -202,4 +202,36 @@ document.addEventListener("DOMContentLoaded", async () => {
   styleSelect.addEventListener("change", dispatchConfigUpdate);
   sizeSlider.addEventListener("input", dispatchConfigUpdate);
   colorPicker.addEventListener("input", dispatchConfigUpdate);
+
+  // 1-Click Paste Token from clipboard
+  const pasteBtn = document.getElementById("paste-token-btn");
+  if (pasteBtn) {
+    pasteBtn.addEventListener("click", async () => {
+      try {
+        const clipText = await navigator.clipboard.readText();
+        if (clipText && clipText.trim()) {
+          tokenInput.value = clipText.trim();
+          showMessage("Token pasted from clipboard!");
+          saveBtn.click(); // Auto-trigger bridge connection
+        } else {
+          showMessage("Clipboard is empty!", true);
+        }
+      } catch (err) {
+        tokenInput.focus();
+        tokenInput.select();
+        showMessage("Press Ctrl+V to paste token", true);
+      }
+    });
+  }
+
+  // Quick accent color swatches
+  document.querySelectorAll(".swatch-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const color = btn.getAttribute("data-color");
+      if (color) {
+        colorPicker.value = color;
+        dispatchConfigUpdate();
+      }
+    });
+  });
 });
