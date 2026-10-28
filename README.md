@@ -15,7 +15,6 @@ here is some DEMO
 
 ![Demo Screenshot](demo_screenshot.png)
 
----
 
 ## ⚡ Quick Start Guide (Zero-Config Plug & Play) .
 
