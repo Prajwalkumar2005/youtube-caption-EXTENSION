@@ -8,10 +8,10 @@
   "font_family": "Segoe UI",
   "font_size": 34,
   "font_color": "#FFFFFF",
-  "highlight_color": "#FFD700",
-  "window_x": 300,
-  "window_y": 80,
-  "window_w": 960,
-  "window_h": 160,
+  "highlight_color": "#ffd700",
+  "window_x": 514,
+  "window_y": 83,
+  "window_w": 670,
+  "window_h": 251,
   "text_style": "poster"
 }

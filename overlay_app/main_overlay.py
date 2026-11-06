@@ -228,13 +228,24 @@ class TransparentOverlayApp:
             is_playing = msg.get("is_playing", True)
             self.root.after(0, self.update_play_state, is_playing)
         elif msg_type == "no_captions":
-            self.root.after(0, self.update_status, "no_captions", "No captions on this video")
+            reason = msg.get("reason", "no_track")
+            self.root.after(0, self.on_no_captions, reason)
         elif msg_type == "config_update":
             self.root.after(0, self.apply_config_update, msg)
 
     def on_client_connected(self):
         self.update_status("connected", "Connected to Chrome")
         self.draw_poster_text("🎵 Connected to Chrome!\nPlay a YouTube Video with CC")
+
+    def on_no_captions(self, reason: str = "no_track"):
+        if reason == "cc_off":
+            self.update_status("connected", "CC is OFF in YouTube")
+            self.badge_label.config(text="[PRESS 'C']")
+            self.draw_poster_text("⏸️ Captions are OFF in YouTube\nPress 'C' in YouTube to Turn On")
+        else:
+            self.update_status("no_captions", "No Captions on Video")
+            self.badge_label.config(text="[NO CC TRACK]")
+            self.draw_poster_text("⚠️ No Captions on this Video\nPlay a video with Closed Captions (CC)")
 
     def on_client_disconnected(self, remaining: int):
         if remaining == 0:

@@ -10,6 +10,8 @@
   let videoElement = null;
   let lastHref = location.href;
   let pollInterval = null;
+  let hasAutoEnabled = false;
+  let lastReportedState = "";
 
   // Spoof visibility to keep YouTube caption render active even when tab is backgrounded
   try {
@@ -63,6 +65,8 @@
     captionTracks = [];
     fetchedCaptions = [];
     isASR = false;
+    hasAutoEnabled = false;
+    lastReportedState = "";
     if (captionObserver) {
       captionObserver.disconnect();
       captionObserver = null;
@@ -79,26 +83,53 @@
     try {
       let playerResponse = null;
 
-      const moviePlayer = document.getElementById("movie_player");
-      if (moviePlayer && typeof moviePlayer.getPlayerResponse === "function") {
-        try {
-          playerResponse = moviePlayer.getPlayerResponse();
-        } catch (e) {}
-      }
-
-      if (!playerResponse || playerResponse?.videoDetails?.videoId !== currentVideoId) {
-        const res = await fetch(window.location.href);
-        const html = await res.text();
-        const match = html.match(/ytInitialPlayerResponse\s*=\s*({.+?});(?:var\s|script)/s);
-        if (match) {
-          try {
-            playerResponse = JSON.parse(match[1]);
-          } catch (e) {}
+      // 1. Try extracting player response directly from page context (MAIN world)
+      try {
+        const pageData = await new Promise((resolve) => {
+          const handler = (evt) => {
+            if (evt.data && evt.data.type === "__YT_OVERLAY_PLAYER_DATA__") {
+              window.removeEventListener("message", handler);
+              resolve(evt.data.payload);
+            }
+          };
+          window.addEventListener("message", handler);
+          const script = document.createElement("script");
+          script.textContent = `
+            try {
+              const pr = (window.ytInitialPlayerResponse) || 
+                         (document.getElementById('movie_player')?.getPlayerResponse?.());
+              window.postMessage({ type: '__YT_OVERLAY_PLAYER_DATA__', payload: pr }, '*');
+            } catch (e) {
+              window.postMessage({ type: '__YT_OVERLAY_PLAYER_DATA__', payload: null }, '*');
+            }
+          `;
+          (document.head || document.documentElement).appendChild(script);
+          script.remove();
+          setTimeout(() => {
+            window.removeEventListener("message", handler);
+            resolve(null);
+          }, 600);
+        });
+        if (pageData && pageData?.videoDetails?.videoId === currentVideoId) {
+          playerResponse = pageData;
         }
+      } catch (e) {}
+
+      // 2. Fallback to HTML fetch with resilient regex
+      if (!playerResponse || playerResponse?.videoDetails?.videoId !== currentVideoId) {
+        try {
+          const res = await fetch(window.location.href);
+          const html = await res.text();
+          const match = html.match(/ytInitialPlayerResponse\s*=\s*({.+?});\s*(?:var\s|<\/script|script)/s);
+          if (match) {
+            playerResponse = JSON.parse(match[1]);
+          }
+        } catch (e) {}
       }
 
       const tracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
       if (!tracks || tracks.length === 0) {
+        checkCaptionAvailability();
         return false;
       }
 
@@ -130,7 +161,57 @@
     } catch (e) {
       console.warn("[YT Lyrics Bridge] TimedText fetch note:", e.message);
     }
+
+    checkCaptionAvailability();
     return false;
+  }
+
+  function checkCaptionAvailability() {
+    const hasSegments = document.querySelectorAll(".ytp-caption-segment").length > 0;
+    if (hasSegments) {
+      return;
+    }
+
+    const subBtn = document.querySelector(".ytp-subtitles-button");
+    if (subBtn && subBtn.offsetParent !== null) {
+      const isPressed = subBtn.getAttribute("aria-pressed") === "true";
+      if (!isPressed) {
+        // Attempt to auto-enable Closed Captions on the YouTube player
+        if (!hasAutoEnabled) {
+          hasAutoEnabled = true;
+          try {
+            console.log("[YT Lyrics Bridge] Auto-enabling CC on player...");
+            subBtn.click();
+          } catch (e) {}
+        }
+
+        setTimeout(() => {
+          const stillPressed = subBtn.getAttribute("aria-pressed") === "true";
+          const segmentsNow = document.querySelectorAll(".ytp-caption-segment").length > 0;
+          if (!stillPressed && !segmentsNow && lastReportedState !== "cc_off") {
+            lastReportedState = "cc_off";
+            safeSendMessage({
+              type: "no_captions",
+              reason: "cc_off",
+              sent_at: Date.now()
+            });
+          }
+        }, 600);
+        return;
+      }
+    }
+
+    // If no tracks were found and subtitles button is not available
+    if (captionTracks.length === 0 && (!subBtn || subBtn.style.display === "none")) {
+      if (lastReportedState !== "no_track") {
+        lastReportedState = "no_track";
+        safeSendMessage({
+          type: "no_captions",
+          reason: "no_track",
+          sent_at: Date.now()
+        });
+      }
+    }
   }
 
   function startTimestampSyncLoop() {
@@ -150,6 +231,7 @@
 
       if (currentCap && currentCap.text !== lastSentText) {
         lastSentText = currentCap.text;
+        lastReportedState = "streaming";
         sendCaptionUpdate(currentCap.text, currentCap.startMs, currentCap.endMs);
       }
     };
@@ -171,6 +253,7 @@
         const fullText = Array.from(segments).map(s => s.textContent).join(" ").replace(/\s+/g, " ").trim();
         if (fullText && fullText !== lastText) {
           lastText = fullText;
+          lastReportedState = "streaming";
           sendCaptionUpdate(fullText, null, null);
         }
       }
@@ -201,9 +284,14 @@
       is_ad: !!isAd,
       sent_at: Date.now()
     });
+
+    if (!isPaused && !isAd && fetchedCaptions.length === 0) {
+      checkCaptionAvailability();
+    }
   }
 
   function sendCaptionUpdate(rawText, startMs, endMs) {
+    if (!rawText || !rawText.trim()) return;
     const isBracketTag = /^\[.+\]$/.test(rawText.trim());
 
     safeSendMessage({
