@@ -13,8 +13,27 @@ except ImportError:
     ServerConnection = Any
 
 DEFAULT_PORTS = [48123, 48124, 48125, 48126, 48127, 48128]
-DEFAULT_AUTH_TOKEN = "6b525ec81e87c7c627f54b564b5b925e"
-CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+MAX_CONCURRENT_CLIENTS = 10
+MAX_PAYLOAD_BYTES = 65536  # 64 KB per frame limit
+MAX_MESSAGES_PER_SEC = 30   # DoS flood prevention
+
+def generate_secure_token() -> str:
+    """Generate a cryptographically secure 128-bit hex pairing token."""
+    return secrets.token_hex(16)
+
+def get_config_dir() -> str:
+    """Resolve persistent configuration directory across script and frozen PyInstaller runtimes."""
+    if getattr(sys, "frozen", False):
+        appdata = os.environ.get("APPDATA") or os.path.expanduser("~")
+        cfg_dir = os.path.join(appdata, "YTLyricsOverlay")
+        os.makedirs(cfg_dir, exist_ok=True)
+        return cfg_dir
+    return os.path.dirname(os.path.abspath(__file__))
+
+def get_config_path() -> str:
+    return os.path.join(get_config_dir(), "config.json")
+
+CONFIG_FILE = get_config_path()
 
 VALID_STYLES = {
     "poster", "neon", "minimal", "classic", "classic_white",
@@ -22,16 +41,15 @@ VALID_STYLES = {
     "sunset", "ghost", "vaporwave"
 }
 HEX_COLOR_REGEX = re.compile(r"^#[0-9a-fA-F]{6}$")
-MAX_PAYLOAD_BYTES = 65536  # 64 KB per frame limit
-MAX_MESSAGES_PER_SEC = 30   # DoS flood prevention
 
 def load_or_create_config() -> Dict[str, Any]:
     default_config = {
-        "auth_token": DEFAULT_AUTH_TOKEN,
+        "auth_token": generate_secure_token(),
         "active_port": DEFAULT_PORTS[0],
         "always_on_top": True,
         "click_through": False,
         "lock_position": False,
+        "show_visualizer": True,
         "bg_opacity": 0.85,
         "font_family": "Segoe UI",
         "font_size": 34,
@@ -48,6 +66,9 @@ def load_or_create_config() -> Dict[str, Any]:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 default_config.update(data)
+                # Ensure a valid token exists
+                if not default_config.get("auth_token"):
+                    default_config["auth_token"] = generate_secure_token()
         except Exception as e:
             print(f"[Config] Note: Loaded defaults due to: {e}")
 
@@ -64,7 +85,7 @@ def save_config(config: Dict[str, Any]):
 class BridgeServer:
     def __init__(self, config: Dict[str, Any], message_callback: Optional[Callable[[Dict[str, Any]], None]] = None):
         self.config = config
-        self.auth_token = config.get("auth_token", DEFAULT_AUTH_TOKEN)
+        self.auth_token = config.get("auth_token") or generate_secure_token()
         self.message_callback = message_callback
         self.active_clients: Set[Any] = set()
         self.client_rate_history: Dict[Any, list] = {}
@@ -72,6 +93,11 @@ class BridgeServer:
         self.bound_port = None
 
     async def validate_connection(self, websocket: ServerConnection) -> bool:
+        # Enforce maximum concurrent connections to prevent connection flooding
+        if len(self.active_clients) >= MAX_CONCURRENT_CLIENTS:
+            print(f"[Security Rejected] Max concurrent connections ({MAX_CONCURRENT_CLIENTS}) reached.")
+            return False
+
         origin = ""
         path = ""
         if hasattr(websocket, "request") and websocket.request:
