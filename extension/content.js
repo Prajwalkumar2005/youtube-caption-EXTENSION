@@ -72,6 +72,8 @@
       captionObserver = null;
     }
 
+    safeSendMessage({ type: "video_navigated", video_id: currentVideoId, sent_at: Date.now() });
+
     // Always enable live DOM observer so on-screen CC is immediately mirrored
     setupDOMObserver();
 
@@ -98,9 +100,9 @@
             try {
               const pr = (window.ytInitialPlayerResponse) || 
                          (document.getElementById('movie_player')?.getPlayerResponse?.());
-              window.postMessage({ type: '__YT_OVERLAY_PLAYER_DATA__', payload: pr }, '*');
+              window.postMessage({ type: '__YT_OVERLAY_PLAYER_DATA__', payload: pr }, window.location.origin);
             } catch (e) {
-              window.postMessage({ type: '__YT_OVERLAY_PLAYER_DATA__', payload: null }, '*');
+              window.postMessage({ type: '__YT_OVERLAY_PLAYER_DATA__', payload: null }, window.location.origin);
             }
           `;
           (document.head || document.documentElement).appendChild(script);
@@ -224,10 +226,27 @@
 
     let lastSentText = "";
 
+    function findCaptionBinarySearch(captions, timeMs) {
+      let low = 0;
+      let high = captions.length - 1;
+      while (low <= high) {
+        const mid = (low + high) >> 1;
+        const cap = captions[mid];
+        if (timeMs >= cap.startMs && timeMs <= cap.endMs) {
+          return cap;
+        } else if (timeMs < cap.startMs) {
+          high = mid - 1;
+        } else {
+          low = mid + 1;
+        }
+      }
+      return null;
+    }
+
     const syncLogic = () => {
       if (video.paused) return;
       const currentTimeMs = video.currentTime * 1000;
-      const currentCap = fetchedCaptions.find(c => currentTimeMs >= c.startMs && currentTimeMs <= c.endMs);
+      const currentCap = findCaptionBinarySearch(fetchedCaptions, currentTimeMs);
 
       if (currentCap && currentCap.text !== lastSentText) {
         lastSentText = currentCap.text;
@@ -290,18 +309,31 @@
     }
   }
 
+  let lastGlobalSentText = "";
+  let lastGlobalSentTime = 0;
+
   function sendCaptionUpdate(rawText, startMs, endMs) {
     if (!rawText || !rawText.trim()) return;
-    const isBracketTag = /^\[.+\]$/.test(rawText.trim());
+    const cleanText = rawText.trim();
+    const now = Date.now();
+
+    // Prevent duplicate emissions between TimedText and DOM observer
+    if (cleanText === lastGlobalSentText && now - lastGlobalSentTime < 650) {
+      return;
+    }
+    lastGlobalSentText = cleanText;
+    lastGlobalSentTime = now;
+
+    const isBracketTag = /^\[.+\]$/.test(cleanText);
 
     safeSendMessage({
       type: "caption_update",
-      text: rawText,
+      text: cleanText,
       start_ms: startMs,
       end_ms: endMs,
       is_asr: isASR,
       is_tag: isBracketTag,
-      sent_at: Date.now()
+      sent_at: now
     });
   }
 
