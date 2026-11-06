@@ -14,11 +14,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   const prevLine1 = document.getElementById("prev-line1");
   const prevLine2 = document.getElementById("prev-line2");
 
-  const DEFAULT_TOKEN = "6b525ec81e87c7c627f54b564b5b925e";
-
   // Load stored preferences
   const stored = await chrome.storage.local.get(["auth_token", "text_style", "font_size", "highlight_color"]);
-  tokenInput.value = stored.auth_token || DEFAULT_TOKEN;
+  tokenInput.value = stored.auth_token || "";
+  if (!tokenInput.value) {
+    tokenInput.placeholder = "Click [Token] on Desktop Overlay to copy";
+  }
 
   if (stored.text_style) {
     styleSelect.value = stored.text_style;
@@ -169,6 +170,21 @@ document.addEventListener("DOMContentLoaded", async () => {
       prevLine1.style.color = color || "#FFD700";
       prevLine1.style.textShadow = "1px 1px 2px #000";
       prevLine2.style.color = color || "#FFD700";
+    } else if (style === "classic_white") {
+      prevLine1.style.color = "#FFFFFF";
+      prevLine1.style.textShadow = "1px 1px 2px #000, -1px -1px 2px #000";
+      prevLine2.style.color = "#FFFFFF";
+      prevLine2.style.textShadow = "1px 1px 2px #000, -1px -1px 2px #000";
+    } else if (style === "minimal") {
+      prevLine1.style.color = "#FFFFFF";
+      prevLine1.style.textShadow = "none";
+      prevLine2.style.color = "#CCCCCC";
+      prevLine2.style.textShadow = "none";
+    } else if (style === "ghost") {
+      prevLine1.style.color = "#F8F8FF";
+      prevLine1.style.textShadow = "0 0 8px rgba(169, 169, 169, 0.7)";
+      prevLine2.style.color = "#DCDCDC";
+      prevLine2.style.textShadow = "0 0 6px rgba(169, 169, 169, 0.5)";
     }
   }
 
