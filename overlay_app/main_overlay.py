@@ -203,15 +203,24 @@ class TransparentOverlayApp:
 
     def start_server_thread(self):
         def run_loop():
-            self.loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self.loop)
-            self.server = BridgeServer(self.config, message_callback=self.on_bridge_message)
-            self.loop.run_until_complete(self.server.start())
-            self.root.after(0, self.update_status, "connected", f"Listening on port {self.server.bound_port}")
-            self.loop.run_forever()
+            try:
+                self.loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(self.loop)
+                self.server = BridgeServer(self.config, message_callback=self.on_bridge_message)
+                port = self.loop.run_until_complete(self.server.start())
+                self.root.after(0, self.update_status, "searching", f"Port {port} Ready")
+                self.loop.run_forever()
+            except Exception as e:
+                print(f"[Bridge Error]: {e}")
+                self.root.after(0, self.on_server_error, str(e))
 
         t = threading.Thread(target=run_loop, daemon=True)
         t.start()
+
+    def on_server_error(self, err_msg: str):
+        self.update_status("disconnected", "Port Conflict")
+        self.badge_label.config(text="[PORT ERROR]")
+        self.draw_poster_text("⚠️ WebSocket Port Conflict\nPorts 48123-48128 are busy")
 
     def on_bridge_message(self, msg: dict):
         msg_type = msg.get("type")
@@ -358,9 +367,11 @@ class TransparentOverlayApp:
             y_base = h / 2
             full_text = f"{line1}\n{line2}" if line2 else line1
             
-            # Neon blur effect
-            for offset in [4, 2]:
-                self.lyrics_canvas.create_text(cx, y_base, text=full_text, font=(font_name, f_size, "bold"), fill="#ff00ff", justify="center")
+            # Multi-pass neon blur and glow halo
+            for dx, dy in [(-3, 0), (3, 0), (0, -3), (0, 3), (-2, -2), (2, 2), (-2, 2), (2, -2)]:
+                self.lyrics_canvas.create_text(cx + dx, y_base + dy, text=full_text, font=(font_name, f_size, "bold"), fill="#ff00ff", justify="center")
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                self.lyrics_canvas.create_text(cx + dx, y_base + dy, text=full_text, font=(font_name, f_size, "bold"), fill="#ff77ff", justify="center")
             self.lyrics_canvas.create_text(cx, y_base, text=full_text, font=(font_name, f_size, "bold"), fill="#ffffff", justify="center")
 
         elif style == "minimal":
@@ -582,7 +593,16 @@ class TransparentOverlayApp:
         def toggle_lp():
             self.config["lock_position"] = lp_var.get()
             save_config(self.config)
-        tk.Checkbutton(win, text="Lock Overlay Position", variable=lp_var, command=toggle_lp, fg="#fff", bg="#181824", selectcolor="#2a2a38").pack(anchor="w", padx=20, pady=4)
+        tk.Checkbutton(win, text="Lock Overlay Position", variable=lp_var, command=toggle_lp, fg="#fff", bg="#181824", selectcolor="#2a2a38").pack(anchor="w", padx=20, pady=2)
+
+        # Visualizer toggle
+        vis_var = tk.BooleanVar(value=self.config.get("show_visualizer", True))
+        def toggle_vis():
+            self.config["show_visualizer"] = vis_var.get()
+            save_config(self.config)
+            if not vis_var.get():
+                self.eq_canvas.delete("all")
+        tk.Checkbutton(win, text="Show Audio Equalizer Animation", variable=vis_var, command=toggle_vis, fg="#fff", bg="#181824", selectcolor="#2a2a38").pack(anchor="w", padx=20, pady=2)
 
         # Opacity slider
         tk.Label(win, text="Background Opacity:", font=("Segoe UI", 9), fg="#aaa", bg="#181824").pack(anchor="w", padx=20)
