@@ -4,6 +4,7 @@
   "always_on_top": true,
   "click_through": false,
   "lock_position": false,
+  "show_visualizer": true,
   "bg_opacity": 0.85,
   "font_family": "Segoe UI",
   "font_size": 34,
