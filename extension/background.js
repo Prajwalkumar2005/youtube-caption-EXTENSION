@@ -1,6 +1,5 @@
 // YouTube Desktop Lyrics Overlay - Background Service Worker
 const PORTS = [48123, 48124, 48125, 48126, 48127, 48128];
-const DEFAULT_AUTH_TOKEN = "6b525ec81e87c7c627f54b564b5b925e";
 
 let ws = null;
 let currentPortIndex = 0;
@@ -26,10 +25,6 @@ async function getAuthToken() {
   const result = await chrome.storage.local.get(["auth_token"]);
   if (result.auth_token) {
     authToken = result.auth_token;
-  } else {
-    // Provide zero-config default pairing token for instant plug-and-play
-    authToken = DEFAULT_AUTH_TOKEN;
-    await chrome.storage.local.set({ auth_token: DEFAULT_AUTH_TOKEN });
   }
   return authToken;
 }
@@ -127,7 +122,7 @@ function scheduleReconnect(immediate = false) {
 // Runtime message dispatcher
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "set_token") {
-    authToken = message.token || DEFAULT_AUTH_TOKEN;
+    authToken = message.token || "";
     chrome.storage.local.set({ auth_token: authToken });
     currentPortIndex = 0; // Reset to primary port
     consecutiveFailuresOnPort = 0;
@@ -142,8 +137,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     isConnected = false;
     isConnecting = false;
 
-    connectWebSocket();
+    if (authToken) {
+      connectWebSocket();
+    }
     sendResponse({ status: "ok" });
+    return true;
+  }
+
+  if (message.type === "video_navigated") {
+    // Clear caption buffer from previous video to avoid stale lyric display
+    messageQueue = messageQueue.filter(m => m.type !== "caption_update");
+    sendToOverlay(message);
+    sendResponse({ status: "cleared" });
     return true;
   }
 
@@ -171,11 +176,14 @@ function sendToOverlay(payload) {
       console.error("[Lyrics Bridge] Failed to send payload:", e);
     }
   } else {
-    // Buffer last 50 messages during connection gaps
-    if (messageQueue.length < 50) {
+    // Keep only the most recent caption in buffer during disconnects
+    if (payload.type === "caption_update") {
+      messageQueue = messageQueue.filter(m => m.type !== "caption_update");
+    }
+    if (messageQueue.length < 10) {
       messageQueue.push(payload);
     }
-    if (!isConnecting && !isConnected) {
+    if (!isConnecting && !isConnected && authToken) {
       connectWebSocket();
     }
   }
