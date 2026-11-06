@@ -57,9 +57,9 @@ if %ERRORLEVEL% neq 0 (
 echo [2/2] Launching YouTube Lyrics Overlay...
 echo.
 echo =======================================================
-echo  Overlay is running!
-echo  Pairing Token: 6b525ec81e87c7c627f54b564b5b925e
-echo  Click 'Token' in header to copy token to clipboard.
+echo  YouTube Desktop Lyrics Overlay is starting!
+echo  - Click [Token] in the overlay header to copy your pairing token.
+echo  - Paste the token into the Chrome Extension popup to pair.
 echo =======================================================
 echo.
 
