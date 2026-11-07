@@ -1,4 +1,8 @@
-// YouTube Desktop Lyrics Overlay - Popup Controller
+/**
+ * YouTube Desktop Lyrics Overlay - Popup Controller.
+ * Handles interactive token pairing, live typography preview rendering,
+ * font-size scaling, highlight color synchronization, and diagnostic test payloads.
+ */
 document.addEventListener("DOMContentLoaded", async () => {
   const tokenInput = document.getElementById("token");
   const saveBtn = document.getElementById("save-token");
