@@ -1,4 +1,9 @@
-// YouTube Desktop Lyrics Overlay - Live Caption Bridge
+/**
+ * YouTube Desktop Lyrics Overlay - Live Caption Bridge Content Script.
+ * Extracts closed captions using dual-engine architecture:
+ * 1. TimedText sub-second API sync
+ * 2. DOM MutationObserver on YouTube player subtitle elements
+ */
 (function () {
   console.log("[YT Lyrics Bridge] Content script initialized");
 
