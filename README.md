@@ -9,16 +9,18 @@
 A sleek, lightweight, and completely private tool to stream **YouTube Closed-Captions & lyrics** directly to a beautiful, transparent, always-on-top desktop overlay in real time. Perfect for karaoke, singing along, language learning, or watching tutorials while working in other windows or playing games.
 
 ---
+here is some DEMO
 
-## 📸 Live Preview
+## 📸 Live Preview (app isnt live due to small glitch )
 
 ![Demo Screenshot](demo_screenshot.png)
 
----
 
-## ⚡ Quick Start Guide (Zero-Config Plug & Play)
+## ⚡ Quick Start Guide (Zero-Config Plug & Play) .
 
 Getting started takes less than 60 seconds. Anyone can download and launch it directly:
+
+check tutorial:
 
 ### 1. Install Chrome Extension (30 Seconds)
 1. **Download** or clone this repository to your computer.
