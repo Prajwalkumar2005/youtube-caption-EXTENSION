@@ -54,6 +54,26 @@ graph TD
     end
 ```
 
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as User Watching Video
+    participant Player as YouTube Player / DOM
+    participant Content as content.js (Dual Engine)
+    participant Worker as background.js (Service Worker)
+    participant Bridge as bridge_server.py (WebSocket)
+    participant UI as main_overlay.py (Tkinter Canvas)
+
+    User->>Player: Plays Video with Closed Captions
+    Player->>Content: Subtitle segment appears / TimedText JSON
+    Content->>Content: Debounce & Binary Search Timestamp
+    Content->>Worker: chrome.runtime.sendMessage(caption_update)
+    Worker->>Bridge: ws.send(JSON frame + Auth Token)
+    Bridge->>Bridge: secrets.compare_digest & rate limit check
+    Bridge->>UI: root.after(0, queue_caption)
+    UI->>User: Displays float lyrics with selected style glow
+```
+
 ---
 
 ## 2. Complete Project File Structure
