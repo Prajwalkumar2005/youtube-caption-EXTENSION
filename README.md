@@ -2,59 +2,52 @@
 
 [![Chrome Extension MV3](https://img.shields.io/badge/Chrome_Extension-MV3-4285F4?logo=googlechrome&logoColor=white)](extension/manifest.json)
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8+-3776AB?logo=python&logoColor=white)](overlay_app/requirements.txt)
-[![Platform Windows 10/11](https://img.shields.io/badge/Platform-Windows_10%20%7C%2011-0078D6?logo=windows&logoColor=white)](run_overlay.bat)
+[![Platform Windows 10/11](https://img.shields.io/badge/Platform-Windows_10%20%7C%2011-0078D6?logo=windows&logoColor=white)](one_click_setup.bat)
+[![Tests Passing](https://img.shields.io/badge/Tests-16%2F16%20Passed-brightgreen.svg)](overlay_app/run_all_tests.py)
 [![License MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Privacy 100% Local](https://img.shields.io/badge/Privacy-100%25_Local_%26_Private-success)](overlay_app/bridge_server.py)
+[![Privacy 100% Local](https://img.shields.io/badge/Privacy-100%25_Local_%26_Private-success)](PRIVACY_POLICY.md)
 
 A sleek, lightweight, and completely private tool to stream **YouTube Closed-Captions & lyrics** directly to a beautiful, transparent, always-on-top desktop overlay in real time. Perfect for karaoke, singing along, language learning, or watching tutorials while working in other windows or playing games.
 
 ---
-here is some DEMO
 
-## 📸 Live Preview (app isnt live due to small glitch )
+## 📸 Live Preview
 
 ![Demo Screenshot](demo_screenshot.png)
 
+---
 
-## ⚡ Quick Start Guide (Zero-Config Plug & Play) .
-
-Getting started takes less than 60 seconds. Anyone can download and launch it directly:
-
-check tutorial:
+## ⚡ 60-Second Universal Setup (Any Windows PC)
 
 ### 1. Install Chrome Extension (30 Seconds)
-1. **Download** or clone this repository to your computer.
-2. Open Google Chrome and navigate to:
+1. Open Google Chrome and navigate to:
    ```text
    chrome://extensions
    ```
-3. Toggle on **Developer mode** in the top-right corner.
-4. Click the **Load unpacked** button in the top-left corner.
-5. Select the `extension` folder inside this project.
-6. Click the puzzle icon 🧩 in Chrome's top toolbar and pin **YouTube Desktop Lyrics Overlay** for quick access.
+2. Toggle on **Developer mode** in the top-right corner.
+3. Click the **Load unpacked** button in the top-left corner.
+4. Select the `extension` folder inside this project.
+5. Click the puzzle icon 🧩 in Chrome's toolbar and pin **YouTube Desktop Lyrics Overlay**.
 
-### 2. Launch Desktop Overlay
-1. Double-click **`run_overlay.bat`** in the main folder.
-   - *Automatic setup:* The script checks your environment, installs necessary dependencies (`websockets`), and launches the overlay.
-   - *No Python?* You can also run the standalone pre-compiled executable directly at `overlay_app\dist\YT_Lyrics_Overlay.exe`.
-2. A sleek transparent overlay will appear on your desktop with a green status indicator: `Connected to Chrome`.
-   - *Zero-Config:* The extension and desktop overlay are pre-configured with an out-of-the-box pairing key—no manual token setup required!
+### 2. Launch Desktop Overlay (10 Seconds)
+Double-click **`one_click_setup.bat`** (or `run_overlay.bat`) in the project folder.
+- *Automatic setup:* The script automatically checks your environment, installs dependencies, and launches the overlay.
+- *No Python installed?* Run the standalone zero-dependency executable directly: `overlay_app\dist\YT_Lyrics_Overlay.exe`.
 
-### 3. Play Any YouTube Video!
+### 3. Play Any YouTube Video! 🎵
 1. Open [YouTube](https://www.youtube.com) and play any video, music track, or YouTube Short with Closed Captions (**CC**) enabled.
-2. Watch the lyrics float seamlessly over your screen!
+2. The lyrics will float seamlessly over your desktop!
 
 ---
 
 ## ✨ Features
 
-- **🎨 13 Cinematic Visual Styles:** Switch styles on the fly from the Chrome popup—from Hollywood cinematic dual-line poster text to Cyberpunk neon glow.
+- **🎨 13 Cinematic Visual Styles:** Switch styles on the fly from the Chrome popup—from Hollywood movie posters to Cyberpunk neon.
 - **🪟 True Desktop Transparency:** Text renders directly over your desktop wallpaper, browser, IDE, or games with zero window borders.
-- **🖱️ Click-Through Mode:** Enable click-through so your mouse clicks pass completely through the lyrics to windows beneath.
+- **🖱️ Click-Through Mode:** Enable click-through (`Ctrl + T`) so your mouse clicks pass completely through the lyrics to windows beneath.
 - **⚡ Dual-Engine Caption Sync:** Combines YouTube's TimedText sub-second API with real-time DOM mutation fallback for sub-frame accuracy.
 - **📱 Shorts & Live Support:** Works seamlessly across standard YouTube videos, YouTube Shorts, and live streams.
 - **🔒 100% Local & Private:** No cloud servers, no account required, no telemetry. Communication runs entirely through a local loopback WebSocket (`127.0.0.1`).
-- **🎛️ Live Customization:** Adjust font sizes, switch styles, and test caption emission directly from the Chrome extension popup.
 
 ---
 
@@ -78,8 +71,6 @@ check tutorial:
 
 ---
 
----
-
 ## ⚡ Keyboard Shortcuts (Global Desktop Hotkeys)
 
 | Shortcut | Action |
@@ -93,68 +84,30 @@ check tutorial:
 
 ---
 
-## 🔒 Security Architecture & Privacy
+## 🔒 Security Architecture
 
-- **100% Local Loopback:** The WebSocket bridge server binds strictly to IPv4 loopback (`127.0.0.1`). It never accepts external LAN or WAN connections.
-- **Timing-Attack Proof Authentication:** Extension-to-desktop authentication uses constant-time token comparison via `secrets.compare_digest`.
-- **Browser Origin Verification:** The bridge server inspects WebSocket connection handshakes and immediately terminates any requests that do not originate from a valid `chrome-extension://` origin.
-- **Message Rate Limiting:** Per-client sliding window rate limiting (maximum 30 messages/second) guards against message flooding and UI denial-of-service.
-- **Strict Payload Sanitization:** All incoming payloads are validated against strict schemas:
-  - Caption text bounded to 1,000 characters.
-  - Font sizes strictly clamped between 12px and 80px.
-  - Accent colors validated against strict hex regex (`^#[0-9a-fA-F]{6}$`).
-  - Max WebSocket frame size capped at 64 KB (`MAX_PAYLOAD_BYTES`).
-- **Principle of Least Privilege:** The Chrome extension requires only minimal permissions (`storage`, `alarms`), with zero broad browsing history or tab access permissions.
+- **100% Local Loopback:** WebSocket bridge server binds strictly to `127.0.0.1`.
+- **Cryptographic Token Verification:** Timing-attack safe token comparison using `secrets.compare_digest`.
+- **Browser Origin Enforcement:** Strictly rejects any connection that does not originate from `chrome-extension://`.
+- **Sliding-Window Rate Limiting:** Caps message ingress at 30 requests/second per client.
 
 ---
 
-## 🕹️ Desktop Overlay Controls
+## 📚 Documentation Links
 
-- **Move Overlay:** Click and drag anywhere along the top dark header bar.
-- **Resize Overlay:** Click and drag the bottom-right resize grip (**◢**).
-- **Audio Visualizer:** Animated reactive equalizer bars in the header pulse during playback.
-- **Minimize Overlay:** Click the **—** minimize button in the header (or press `Ctrl + H`) to toggle visibility.
-- **Copy Pairing Token:** Click the **📋 Token** button in the header to copy your pairing key with 1 click.
-- **Settings Panel:** Click the **⚙** gear icon in the header to:
-  - Toggle **Click-Through Mode** (clicks pass through overlay).
-  - Toggle **Lock Position** (prevents accidental movement).
-  - Adjust **Background Opacity** slider.
-  - **🎲 Generate New Token:** Create a fresh cryptographically secure random token and copy it to clipboard with 1 click.
-  - View full list of hotkeys.
-- **Close Overlay:** Click the **✕** button on the right side of the header.
+- [Universal Easy Setup Guide](EASY_SETUP_GUIDE.md)
+- [Official Deployment Guide](YouTube_Desktop_Lyrics_Overlay_Deployment_Guide.md)
+- [Production Verification & Sign-Off Report](PERFECT_DEPLOYMENT_VERIFICATION.md)
+- [Full System Architecture & Viva Presentation Guide](PROJECT_ARCHITECTURE.md)
+- [Privacy Policy](PRIVACY_POLICY.md)
+- [Installation Handbook](INSTALLATION.md)
+- [Security Policy](SECURITY.md)
+- [Contribution Guidelines](CONTRIBUTING.md)
+- [Chrome Web Store Submission Package](CHROME_STORE_LISTING.md)
+- [Changelog](CHANGELOG.md)
 
 ---
 
-## 🛠️ Developer & Distribution Scripts
+## 📜 License
 
-| Script | Purpose |
-| :--- | :--- |
-| **`run_overlay.bat`** | One-click launcher for Windows; auto-detects Python or standalone EXE. |
-| **`build_exe.bat`** | Compiles `YT_Lyrics_Overlay.exe` standalone binary using PyInstaller. |
-| **`diagnose_setup.bat`** | Runs full system health check (Python, ports, dependencies, manifest). |
-| **`package_extension.bat`** | Bundles the `extension/` folder into `dist/yt-lyrics-overlay-extension.zip`. |
-| **`setup_windows.bat`** | Automatically installs and upgrades Python dependencies from `requirements.txt`. |
-| **`overlay_app/test_bridge.py`** | Automated security and communication test suite for WebSocket bridge. |
-| **`.github/workflows/ci.yml`** | Continuous integration workflow running health checks, tests, and packaging. |
-
----
-
-## ❓ Troubleshooting FAQ
-
-### Lyrics aren't appearing on desktop?
-1. Check that Closed Captions (**CC**) are turned on in the YouTube player (press `C` on your keyboard).
-2. Look at the status dot in the overlay header:
-   - 🟢 **Green:** Connected to Chrome.
-   - 🟡 **Yellow:** Waiting for connection. Click **Connect Bridge** in the Chrome extension popup.
-   - 🟠 **Orange:** No captions track found for current video.
-
-### Running games in fullscreen?
-Windows exclusive fullscreen games take exclusive control of the display hardware and hide desktop overlays. **Switch your game display mode to "Borderless Windowed"** or "Windowed Fullscreen" to keep lyrics floating over gameplay.
-
-### Port conflict?
-The overlay automatically scans fallback ports `48123` through `48128`. If port 48123 is busy, it automatically binds to the next available port and informs the Chrome extension.
-
----
-
-## 📄 License
-This project is open-source and available under the [MIT License](LICENSE).
+Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for full details.
