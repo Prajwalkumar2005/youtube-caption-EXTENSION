@@ -1,3 +1,10 @@
+"""WebSocket Bridge Server for YouTube Desktop Lyrics Overlay.
+
+Manages bidirectional communication between Google Chrome extension clients and the
+local transparent Win32 Tkinter desktop overlay window. Enforces cryptographic pairing,
+origin validation, sliding-window rate limiting, and frame bounds.
+"""
+
 import asyncio
 import json
 import secrets
@@ -5,7 +12,7 @@ import os
 import sys
 import re
 import time
-from typing import Dict, Any, Callable, Optional, Set
+from typing import Dict, Any, Callable, Optional, Set, List, Tuple
 import websockets
 try:
     from websockets.asyncio.server import ServerConnection
