@@ -1,4 +1,8 @@
-// YouTube Desktop Lyrics Overlay - Background Service Worker
+/**
+ * YouTube Desktop Lyrics Overlay - Background Service Worker.
+ * Manages persistent loopback WebSocket connection to localhost:48123 (with port rotation).
+ * Dispatches caption frames, handles reconnection alarms, and buffers lyric segments.
+ */
 const PORTS = [48123, 48124, 48125, 48126, 48127, 48128];
 
 let ws = null;
