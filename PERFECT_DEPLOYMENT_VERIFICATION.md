@@ -79,8 +79,14 @@ test_constant_time_comparison           ... PASS
 test_token_format_and_entropy           ... PASS
 test_bitmask_operations                 ... PASS
 test_non_overlapping_bitmasks          ... PASS
+test_sliding_window_rate_limiting       ... PASS
+test_oversized_caption_clamping         ... PASS
+test_valid_caption_payload              ... PASS
+test_config_update_validation           ... PASS
+test_live_token_rotation                ... PASS
+test_screen_boundary_clamping           ... PASS
 -----------------------------------------------------------------
-Ran 16 tests in 0.022s | Result: 100% OK
+Ran 22 tests in 0.045s | Result: 100% OK (All Passing)
 =================================================================
 ```
 
