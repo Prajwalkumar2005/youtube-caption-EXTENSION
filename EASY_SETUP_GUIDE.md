@@ -32,7 +32,7 @@ Navigate to:
 ```text
 overlay_app\dist\YT_Lyrics_Overlay.exe
 ```
-Double-click `YT_Lyrics_Overlay.exe` to run immediately!
+Double-click `YT_Lyrics_Overlay.exe` to run immediately! This single executable is fully portable and can be run directly from any USB flash drive or folder without administrator permissions.
 
 ---
 
