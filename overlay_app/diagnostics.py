@@ -108,6 +108,18 @@ def main():
         check_os_features()
     ]
 
+    if "--json" in sys.argv:
+        report = {
+            "all_passed": all(results),
+            "python": check_python_version(),
+            "dependencies": check_dependencies(),
+            "ports": check_port_availability(),
+            "extension": check_extension_assets(),
+            "os_compositor": check_os_features()
+        }
+        print(json.dumps(report, indent=2))
+        sys.exit(0 if all(results) else 1)
+
     print()
     print("=" * 65)
     if all(results):
