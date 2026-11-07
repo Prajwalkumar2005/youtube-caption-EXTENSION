@@ -1,3 +1,10 @@
+"""YouTube Desktop Lyrics Overlay - Main Graphical Desktop Companion.
+
+Creates a borderless, transparent, always-on-top Win32 desktop overlay window
+that renders synchronized YouTube closed-caption lyrics in real time with 13 visual
+typography styles, keyboard shortcuts, click-through mode, and audio equalizer bars.
+"""
+
 import sys
 import os
 import ctypes
