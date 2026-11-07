@@ -1,21 +1,56 @@
 @echo off
-setlocal
-title Setup Python Environment
+setlocal enabledelayedexpansion
+title YouTube Desktop Lyrics Overlay - Environment Setup
 
 cd /d "%~dp0"
 
-echo Setting up Python environment for YouTube Lyrics Overlay...
+echo =======================================================
+echo    YouTube Desktop Lyrics Overlay - Environment Setup
+echo =======================================================
+echo.
+
 where python >nul 2>nul
+if %ERRORLEVEL% equ 0 (
+    set "PY_CMD=python"
+    goto :FOUND_PYTHON
+)
+
+where py >nul 2>nul
+if %ERRORLEVEL% equ 0 (
+    set "PY_CMD=py"
+    goto :FOUND_PYTHON
+)
+
+echo [Error] Python 3.8+ was not found on your system!
+echo Please install Python from https://www.python.org/
+echo Make sure to check "Add Python to PATH" during installation.
+echo.
+pause
+exit /b 1
+
+:FOUND_PYTHON
+echo [1/3] Python interpreter found:
+%PY_CMD% --version
+echo.
+
+echo [2/3] Upgrading pip and installing required dependencies...
+%PY_CMD% -m pip install --upgrade pip
+%PY_CMD% -m pip install -r "overlay_app\requirements.txt"
 if %ERRORLEVEL% neq 0 (
-    echo [Error] Python is not installed or not in system PATH.
-    echo Please install Python from https://www.python.org/
+    echo [Error] Failed to install dependencies. Check your internet connection.
     pause
     exit /b 1
 )
 
-python -m pip install --upgrade pip
-python -m pip install -r "overlay_app\requirements.txt"
+echo.
+echo [3/3] Running environment diagnostics...
+%PY_CMD% overlay_app\diagnostics.py
 
 echo.
-echo Environment setup complete! You can now launch using run_overlay.bat
+echo =======================================================
+echo  Setup Completed Successfully!
+echo  You can now launch the app anytime with run_overlay.bat
+echo =======================================================
+echo.
 pause
+exit /b 0
